@@ -758,4 +758,527 @@ echo $s
 
 ### 基本语法
 
-TODO
+```shell
+read(选项)(参数)
+```
+
+选项：
+
+- -p：指定读取值时的提示符；
+- -t：指定读取值时等待的时间（秒）
+
+参数：
+
+- 变量：指定读取值的变量名
+
+
+
+### 实操案例
+
+提示7秒，读取控制台输入的名称
+
+```shell
+[root@192 ShellScripts]# touch read.sh
+[root@192 ShellScripts]# vim read.sh
+
+# 脚本内容如下
+#!/bin/bash
+read -t 7 -p "Enter your name in 7 seconds" NAME
+echo $NAME
+
+[root@192 ShellScripts]# bash read.sh
+```
+
+
+
+## 函数
+
+### 1.系统函数
+
+#### basename
+
+**基本语法**
+
+```shell
+basename [string / pathname] [suffix]
+```
+
+
+
+**功能描述**
+
+basename 命令会删掉所有的前缀包括最后一个 `/` 字符，然后将字符串显示出来
+
+
+
+**选项**
+
+suffix 为后缀，如果 suffix 被指定了，basename 会将 pathname 或 string 中的suffix 去掉
+
+
+
+**实操案例**
+
+截取该 /home/spring/springstone.txt 路径的文件名称
+
+```shell
+[root@192 ShellScripts]# basename /home/spring/springstone.txt
+# springstone.txt
+[root@192 ShellScripts]# basename /home/spring/springstone.txt .txt
+# springstone
+```
+
+
+
+#### dirname
+
+**基本语法**
+
+```shell
+dirname 文件绝对路径
+```
+
+
+
+**功能描述**
+
+从给定的绝对路径中去除文件名，然后返回剩下的路径
+
+
+
+**实操案例**
+
+获取 springstone.txt 文件的路径
+
+```shell
+[root@192 ShellScripts]# dirname /home/spring/springstone.txt
+# /home/spring
+```
+
+
+
+### 2.自定义函数
+
+#### 基本语法
+
+```shell
+[ function ] funname[()]
+{
+
+	Action;
+	[return int;]
+
+}
+
+funname
+```
+
+==中括号中的内容可以省略==
+
+
+
+#### 经验技巧
+
+1.必须在调用函数地方之前，先声明函数，shell脚本是逐行运行的。不会像其他语言一样预编译。
+
+2.函数返回值，只能通过`$?`系统变量获得，可以显示加 **return** 返回；如果不加，将以最后一条命令运行结果作为返回值。
+
+**return** 后跟数值 n(0~255)
+
+
+
+#### 实操案例
+
+计算两个输入参数的和
+
+```shell
+[root@192 ShellScripts]# touch sum.sh
+[root@192 ShellScripts]# vim sum.sh
+
+# 脚本内容如下
+#!/bin/bash
+function sum()
+{
+	s=0;
+	s=$[$1+$2];
+	echo $s;
+}
+
+read -p "input your parameter1:" P1
+read -p "input your parameter2:" P2
+
+sum $P1 $P2
+
+[root@192 ShellScripts]# bash sum.sh
+```
+
+
+
+## Shell工具
+
+### 1.cut
+
+**cut** 的工作就是“剪”，具体的说就是在文件中负责剪切数据用的。
+
+**cut** 命令从文件的每一行剪切字节、字符和字段并将它们输出。
+
+#### 基本用法
+
+```shell
+cut [选项参数] filename
+```
+
+==说明：默认分隔符是制表符==
+
+
+
+#### 选项参数
+
+| 参数   | 功能                         |
+| ------ | ---------------------------- |
+| **-f** | 列号，提取第几列             |
+| **-d** | 分隔符，按照指定分隔符分割列 |
+
+
+
+#### 实操案例
+
+```shell
+# 数据准备
+[root@192 ShellScripts]# touch cut.txt
+[root@192 ShellScripts]# vim cut.txt
+
+# 文本内容如下
+dong shen
+guan zhen
+wo  wo
+lai  lai
+le  le
+
+# 切割 cut.txt 第一列字符
+[root@192 ShellScripts]# cut -d " " -f 1 cut.txt
+dong
+guan
+wo
+lai
+le
+
+# 切割 cut.txt 第二、三列
+[root@192 ShellScripts]# cut -d " " -f 2,3 cut.txt
+shen
+zhen
+ wo
+ lai
+ le
+
+# 在 cut.txt 文件中切割出 guan
+[root@192 ShellScripts]# cat cut.txt | grep "guan" | cut -d " " -f 1
+guan
+
+# 选取系统PATH变量值，第2个“:”开始后的所有路径
+[root@192 ShellScripts]# echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/data/service/jdk/bin:/data/service/maven/bin:/root/bin
+[root@192 ShellScripts]# echo $PATH | cut -d : -f 2-
+/usr/local/bin:/usr/sbin:/usr/bin:/data/service/jdk/bin:/data/service/maven/bin:/root/bin
+
+# 切割ifconfig后打印的IP地址
+[root@192 ShellScripts]# ifconfig ens33 | grep "inet " | cut -d "" -f 10
+192.168.230.128
+```
+
+
+
+### 2.sed
+
+**sed** 是一种<span style="color:red;">流</span>编辑器，它一次处理一行内容。
+
+处理时，把当前处理的行存储在临时缓冲区中，称为“模式空间”，接着用 **sed** 命令处理缓冲区中的内容，处理完成后，把缓冲区的内容送往屏幕。
+
+接着处理下一行，这样不断重复，直到文件末尾。
+
+<span style="color:red;">文件内容并没有改变</span>，除非你使用重定向存储输出。
+
+#### 基本语法
+
+```shell
+sed [选项参数] 'command' filename
+```
+
+
+
+#### 选项参数
+
+| 参数   | 功能                                                     |
+| ------ | -------------------------------------------------------- |
+| **-e** | 直接在指令列模式（即有多个command）上进行 sed 的动作编辑 |
+
+
+
+#### 命令功能
+
+| 命令  | 功能                                      |
+| ----- | ----------------------------------------- |
+| **a** | 新增（a的后面可以接字符串，在下一行出现） |
+| **d** | 删除                                      |
+| **s** | 查找并替换                                |
+
+
+
+#### 实操案例
+
+```shell
+# 数据准备
+[root@192 ShellScripts]# touch sed.txt
+[root@192 ShellScripts]# vim sed.txt
+
+# 文本内容如下
+dong shen
+guan zhen
+wo  wo
+lai  lai
+
+le  le
+
+# 1.将“mei nv”这个单词插入到 sed.txt 第二行下，打印
+[root@192 ShellScripts]# sed '2a mei nv' sex.txt
+dong shen
+guan zhen
+mei nv
+wo  wo
+lai  lai
+
+le  le
+
+# 文本原内容未发生改变
+[root@192 ShellScripts]# cat sed.txt
+dong shen
+guan zhen
+wo  wo
+lai  lai
+
+le  le
+
+# 2.删除 sed.txt 文件中所有包含 wo 的行
+[root@192 ShellScripts]# sed '/wo/d' sed.txt
+dong shen
+guan zhen
+lai  lai
+
+le  le
+
+# 3.将 sed.txt 文件中 wo 替换成 ni
+# 注意：g表示global，全局替换
+[root@192 ShellScripts]# sed 's/wo/ni/g' sed.txt
+dong shen
+guan zhen
+ni  ni
+lai  lai
+
+le  le
+
+# 4.将 sed.txt 文件中第二行删除，并将 wo 替换为 ni
+[root@192 ShellScripts]# sed -e '2d' -e 's/wo/ni/g' sed.txt
+dong shen
+ni  ni
+lai  lai
+
+le  le
+```
+
+
+
+### 3.awk
+
+一个强大的文本分析工具，把文件逐行的读入，以空格为默认分隔符将每行切片，切开的部分再进行分析处理。
+
+#### 基本语法
+
+```shell
+awk [选项参数] 'pattern1{action1} pattern2{action2} ...' filename
+```
+
+==pattern：表示 AWK 在数据中查找的内容，即匹配模式==
+
+==action：在找到匹配内容时所执行的一系列命令==
+
+
+
+#### 选项参数
+
+| 参数   | 功能                   |
+| ------ | ---------------------- |
+| **-F** | 指定输入文件拆分分隔符 |
+| **-v** | 赋值一个用户定义变量   |
+
+
+
+#### 实操案例
+
+```shell
+# 数据准备
+[root@192 ShellScripts]# sudo cp /etc/passwd ./
+
+# 搜索 passwd 文件中 以 root 关键字开头的所有行，并输出该行的第7列
+[root@192 ShellScripts]# awk -F : '/^root/{print $7}' passwd
+/bin/bash
+
+# 搜索 passwd 文件中 以 root 关键字开头的所有行，并输出该行的第1列和第7列，中间以逗号分隔
+[root@192 ShellScripts]# awk -F : '/^root/{print $1","$7"}' passwd
+root,/bin/bash
+
+# 注意：只有匹配了 pattern 的行，才会执行 action
+
+# 只显示 /etc/passwd 的第1列和第7列，以逗号分隔，
+# 且在第一行添加列名 user，shell
+# 在最后一行添加“dahaige,/bin/zuishuai"
+[root@192 ShellScripts]# awk -F : 'BEGIN{print "user,shell"} {print $1","$7} END{print "dahaige,/bin/zuishuai"}' passwd
+user,shell
+root,/bin/bash
+bin,/sbin/nologin
+...
+dahaige,/bin/zuishuai
+
+# 注意：BEGIN 在所有数据读取行之前执行；END 在所有数据执行之后执行
+
+# 将 passwd 文件中的用户 id 增加 数值1并输出
+[root@192 ShellScripts]# awk -v i=1 -F : '{print $3+i}' passwd
+1
+2
+3
+4
+...
+```
+
+
+
+#### awk的内置变量
+
+| 变量     | 说明                                   |
+| -------- | -------------------------------------- |
+| FILENAME | 文件名                                 |
+| NR       | 已读的记录数                           |
+| NF       | 浏览记录的域的个数（切割后，列的个数） |
+
+
+
+#### 实操案例
+
+```shell
+# 统计 passwd 文件名，每行的行号，每行的列数
+[root@192 ShellScripts]# awk -F '{ print "filename:" FILENAME ", linenumber:" NR ", columns:" NF}' passwd
+filename:passwd, linenumber:1, columns:7
+filename:passwd, linenumber:2, columns:7
+filename:passwd, linenumber:3, columns:7
+
+# 切割IP
+[root@192 ShellScripts]# ifconfig ens33 | grep "inet " | awk -F " " '{print $2}'
+192.168.230.128
+
+# 查询 sed.txt 中空行所在的行号（使用正则）
+[root@192 ShellScripts]# awk '/^$/{print NR}' sed.txt
+5
+7
+```
+
+
+
+### 4.sort
+
+sort 命令在Linux中非常有用，它将文件进行排序，并将排序结果标准输出。
+
+#### 基本语法
+
+```shell
+sort (选项) (参数)
+```
+
+==参数：指定待排序的文件列表==
+
+
+
+#### 选项参数
+
+| 选项 | 说明                     |
+| ---- | ------------------------ |
+| -n   | 依照数值的大小来排序     |
+| -r   | 以相反的顺序来排序       |
+| -t   | 设置排序时所用的分隔字符 |
+| -k   | 指定需要排序的列         |
+
+
+
+#### 实操案例
+
+```shell
+# 数据准备
+[root@192 ShellScripts]# touch sort.sh
+[root@192 ShellScripts]# vim sort.sh
+
+# 脚本内容如下
+bb:40:5.4
+bd:20:4.2
+xz:50:2.3
+cls:10:3.5
+ss:30:1.6
+
+# 按照“:”分割后把第三列倒序排序
+[root@192 ShellScripts]# sort -t : -nrk 3 sort.sh
+xz:50:2.3
+bb:40:5.4
+ss:30:1.6
+bd:20:4.2
+cls:10:3.5
+```
+
+
+
+## 企业真实面试题
+
+### 1.京东
+
+![京东面试题](./images/京东面试题.png)
+
+
+
+### 2.搜狐&和讯网
+
+![搜狐&和讯网面试题](./images/搜狐&和讯网面试题.png)
+
+
+
+### 3.新浪
+
+问题1：用Shell写一个脚本，对文本中无序的一列数字排序
+
+```shell
+cat test.txt
+9
+8
+7
+6
+5
+4
+3
+2
+10
+1
+
+sort -n test.txt | awk '{a+=$0; print $0} END{print "SUM="a}'
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+SUM=55
+```
+
+
+
+### 4.金和网络
+
+![金和网络面试题](./images/金和网络面试题.png)
